@@ -1387,7 +1387,7 @@ class H2Connection(object):
             # compatibility, catch all of them.
             raise ProtocolError("Error decoding header block: %s" % e)
 
-        headers = validate_headers(headers)
+        headers = validate_headers(headers, client_side=self.client_side)
         events = self.state_machine.process_input(
             ConnectionInputs.RECV_HEADERS
         )

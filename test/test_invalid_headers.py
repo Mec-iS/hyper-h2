@@ -41,6 +41,9 @@ class TestInvalidFrameSequences(object):
         base_request_headers + [('transfer-encoding', 'gzip')],
         base_request_headers + [('upgrade', 'super-protocol/1.1')],
         base_request_headers + [('te', 'chunked')],
+        base_request_headers + [('host', 'notexample.com')],
+        [header for header in base_request_headers
+                if header[0] != ':authority'],
     ]
 
     @pytest.mark.parametrize('headers', invalid_header_blocks)

@@ -147,9 +147,14 @@ def authority_from_headers(headers):
     return None
 
 
-def validate_headers(headers):
+def validate_headers(headers, client_side):
     """
     Validates a header sequence against a set of constraints from RFC 7540.
+
+    :param client_side: Whether the associated connection is to be used on the
+        client side of a connection, or on the server side.  Some checks
+        only apply on either the client or server side.
+    :type client_side: ``bool``
     """
     # This validation logic is built on a sequence of generators that are
     # iterated over to provide the final header list. This reduces some of the
@@ -164,6 +169,12 @@ def validate_headers(headers):
     headers = _reject_te(headers)
     headers = _reject_connection_header(headers)
     headers = _reject_pseudo_header_fields(headers)
+
+    # We only expect to see :authority and Host headers on request header
+    # blocks, so only perform this validation if we're on the server side.
+    if not client_side:
+        headers = _check_host_authority_header(headers)
+
     return list(headers)
 
 
@@ -242,3 +253,33 @@ def _reject_pseudo_header_fields(headers):
             seen_regular_header = True
 
         yield header
+
+
+def _check_host_authority_header(headers):
+    """
+    Raises a ProtocolError if a header block arrives that does not contain
+    :authority or a Host header, or if a header block contains both fields,
+    but their values do not match.
+    """
+    authority_header_val = None
+    host_header_val = None
+
+    for header in headers:
+        if header[0] == b':authority':
+            authority_header_val = header[1]
+        elif header[0] == b'host':
+            host_header_val = header[1]
+
+        yield header
+
+    if (authority_header_val is None) and (host_header_val is None):
+        raise ProtocolError(
+            "Did not receive an :authority or Host header."
+        )
+
+    if (authority_header_val is not None) and (host_header_val is not None):
+        if authority_header_val != host_header_val:
+            raise ProtocolError(
+                "Received mismatched :authority and Host headers: %r / %r" %
+                (authority_header_val, host_header_val)
+            )
