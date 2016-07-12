@@ -15,7 +15,7 @@ import h2.exceptions
 import h2.utilities
 
 from hypothesis import given
-from hypothesis.strategies import binary, lists, tuples
+from hypothesis.strategies import binary, booleans, lists, tuples
 
 HEADERS_STRATEGY = lists(tuples(binary(), binary()))
 
@@ -95,18 +95,21 @@ class TestFilter(object):
     HTTP/2 and so may never hit the function, but it's worth validating that it
     behaves as expected anyway.
     """
-    @given(HEADERS_STRATEGY)
-    def test_range_of_acceptable_outputs(self, headers):
+    @given(HEADERS_STRATEGY, booleans())
+    def test_range_of_acceptable_outputs(self, headers, client_side):
         """
         validate_headers either returns the data unchanged or throws a
         ProtocolError.
         """
         try:
-            assert headers == h2.utilities.validate_headers(headers)
+            assert headers == h2.utilities.validate_headers(
+                headers,
+                client_side=client_side)
         except h2.exceptions.ProtocolError:
             assert True
 
-    def test_invalid_pseudo_headers(self):
+    @pytest.mark.parametrize('client_side', [True, False])
+    def test_invalid_pseudo_headers(self, client_side):
         headers = [(b':custom', b'value')]
         with pytest.raises(h2.exceptions.ProtocolError):
-            h2.utilities.validate_headers(headers)
+            h2.utilities.validate_headers(headers, client_side=client_side)
