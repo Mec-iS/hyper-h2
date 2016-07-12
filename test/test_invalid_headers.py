@@ -43,7 +43,7 @@ class TestInvalidFrameSequences(object):
         base_request_headers + [('te', 'chunked')],
         base_request_headers + [('host', 'notexample.com')],
         [header for header in base_request_headers
-                if header[0] != ':authority'],
+         if header[0] != ':authority'],
     ]
 
     @pytest.mark.parametrize('headers', invalid_header_blocks)
